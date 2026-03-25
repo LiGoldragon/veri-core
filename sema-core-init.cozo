@@ -1,7 +1,9 @@
 # Sema Core — boots the binary world
-# Two pillars: Estar (the energetic being-quality layer) and Structure.
 # Four prime generators: Polarity(2), Modality(3), Dignity(5), Archetype(7).
 # All domains derive multiplicatively: Element=2², Sign=2²×3, Decan=2²×3², 360°=2³×3²×5.
+# Ordinal alignment: every domain's variant order matches its generator.
+# @1 in ANY 3-domain = the same energetic quality (fixed/sustaining).
+# Name domain records the correspondence between domain variants and generator positions.
 # No Rust yet — CozoScript schemas only. Rust VCS/boot rewrite comes later.
 # Load order: sema-core -> sema -> noesis
 
@@ -177,8 +179,8 @@
 }
 
 # ─── Planet-Sign Dignity Assignments ─────────────────────────────────
-# dignity column references the unified Dignity domain (Pancha Tattva).
-# akasha=domicile, vayu=exaltation, tejas=triplicity, apas=bound, prithvi=face.
+# dignity column references Dignity (5 elements).
+# space=domicile, air=exaltation, fire=triplicity, water=bound, earth=face.
 
 :create Rulership {
   sign: String,
@@ -208,7 +210,29 @@
 }
 
 # ═══════════════════════════════════════════════════════════════════════
-# PILLAR 3 — Structure (how schemas self-describe)
+# NAME — universal label registry + generator correspondence
+# Every context-specific variant label is a Name variant (capnp enum).
+# The name mapping relation connects domain variants to generator positions.
+# ═══════════════════════════════════════════════════════════════════════
+
+:create Name {
+  name: String =>
+  description: String,
+  phase: String,
+  dignity: String
+}
+
+:create name {
+  domain: String,
+  variant: String,
+  generator: String,
+  position: String =>
+  phase: String,
+  dignity: String
+}
+
+# ═══════════════════════════════════════════════════════════════════════
+# Structure (how schemas self-describe)
 # The vocabulary for describing any typed schema.
 # AMOP metaclass pattern: closes at 2 meta-levels.
 # ═══════════════════════════════════════════════════════════════════════
