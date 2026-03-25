@@ -454,3 +454,36 @@
   ["AspectNature", "polarity", "Dignity", "earth", "manifest", "space"],
 ]
 :put name { domain, variant, generator, position => phase, dignity }
+
+# ═══════════════════════════════════════════════════════════════════════
+# Morphisms — structural connections between domains
+# ═══════════════════════════════════════════════════════════════════════
+
+?[source, target, via, functor, description, phase, dignity] <- [
+  ["Sign", "Element", "element", "deterministic", "Each sign has exactly one element", "manifest", "space"],
+  ["Sign", "Modality", "modality", "deterministic", "Each sign has exactly one modality", "manifest", "space"],
+  ["Sign", "Archetype", "ruler", "tradition_dependent", "Domicile rulership — traditional scheme", "manifest", "space"],
+  ["Measure", "Sign", "sign", "bijective", "Each measure maps 1:1 to a sign", "manifest", "space"],
+  ["Measure", "Dimension", "dimension", "bijective", "Each measure maps to a named dimension", "manifest", "space"],
+  ["Measure", "Element", "element", "deterministic", "Inherited from sign-element mapping", "manifest", "space"],
+  ["Measure", "Modality", "modality", "deterministic", "Inherited from sign-modality mapping", "manifest", "space"],
+  ["Dimension", "Measure", "formula", "bijective", "Inverse of Measure-Dimension", "manifest", "space"],
+  ["House", "Sign", "natural_sign", "bijective", "Each house maps to its natural sign", "manifest", "space"],
+  ["House", "Element", "element", "deterministic", "Houses inherit element from natural sign", "manifest", "space"],
+  ["House", "Modality", "modality", "deterministic", "Angular=cardinal, succedent=fixed, cadent=mutable", "manifest", "space"],
+  ["House", "Dimension", "dimension", "bijective", "Young 12-fold mapping: house to physics dimension", "manifest", "space"],
+  ["Decan", "Sign", "sign", "deterministic", "Each decan belongs to one sign", "manifest", "space"],
+  ["Decan", "Archetype", "ruler", "deterministic", "Chaldean order planetary ruler", "manifest", "space"],
+  ["Aspect", "AspectNature", "nature", "deterministic", "Each aspect has one nature", "manifest", "space"],
+  ["Polarity", "Archetype", "luminary", "deterministic", "Polarity luminary is an archetype", "manifest", "space"],
+  ["Rulership", "Sign", "sign", "deterministic", "Each rulership row belongs to one sign", "manifest", "space"],
+  ["Rulership", "Archetype", "planet", "deterministic", "Each rulership row belongs to one archetype", "manifest", "space"],
+  ["Rulership", "Dignity", "dignity", "deterministic", "Each rulership has a dignity level", "manifest", "space"],
+  ["Scalar", "Element", "generator", "deterministic", "4-domain aligned with Element", "manifest", "space"],
+  ["Cardinality", "Element", "generator", "deterministic", "4-domain aligned with Element", "manifest", "space"],
+  ["Direction", "Polarity", "generator", "deterministic", "2-domain aligned with Polarity", "manifest", "space"],
+  ["Phase", "Modality", "generator", "deterministic", "3-domain aligned with Modality", "manifest", "space"],
+  ["Functor", "Modality", "generator", "deterministic", "3-domain aligned with Modality", "manifest", "space"],
+  ["AspectNature", "Dignity", "generator", "deterministic", "5-domain aligned with Dignity", "manifest", "space"],
+]
+:put morphism { source, target, via => functor, description, phase, dignity }
