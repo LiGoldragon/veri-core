@@ -1,82 +1,207 @@
-# Sema Core — boots the binary world
+# Sema Core — the primordial layer
+# Every domain is a triad: { ordinal: Int => variant: String, structure: String }
+# Ordinal is Solar (identity), variant is Lunar (name), structure is Saturnian (connection).
 # Four prime generators: Polarity(2), Modality(3), Dignity(5), Archetype(7).
-# All domains derive multiplicatively: Element=2², Sign=2²×3, Decan=2²×3², 360°=2³×3²×5.
-# Ordinal alignment: every domain's variant order matches its generator.
-# @1 in ANY 3-domain = the same energetic quality (fixed/sustaining).
-# Name domain records the correspondence between domain variants and generator positions.
-#
-# COEXISTENCE: When loaded after samskara-core, only NEW relations are created.
-# Phase, Dignity, Domain, morphism, Functor, Element, Modality, Sign, Measure,
-# Dimension, House, Aspect, AspectNature, Decan, Rulership, Condition already
-# exist from the old stack. Sema-core seeds (:put) into them but does not re-create.
-# Load order: samskara-core -> samskara -> sema-core -> sema -> noesis-schema
+# Composites derive multiplicatively: Element=Pol², Sign=Elem×Mod, Decan=Sign×Mod.
+# Connections derived from composition + ordinals — no stored morphisms.
+# Full independence — no coexistence with samskara old stack.
 
 # ═══════════════════════════════════════════════════════════════════════
-# NEW relations only — not in the old stack
+# Meta-domains
 # ═══════════════════════════════════════════════════════════════════════
 
-# Archetype (was Planet in old stack — new name, same schema)
-:create Archetype {
-  name: String =>
-  glyph: String,
-  stage: Int,
-  freedom: Int,
-  phase: String,
-  dignity: String
+:create Domain {
+  ordinal: Int =>
+  variant: String,
+  structure: [String]
 }
 
-# Polarity (was Sect in old stack — new name, same schema)
+:create Astrality {
+  ordinal: Int =>
+  variant: String,
+  structure: String
+}
+
+:create Structure {
+  ordinal: Int =>
+  variant: String,
+  structure: String
+}
+
+# ═══════════════════════════════════════════════════════════════════════
+# Prime generators
+# ═══════════════════════════════════════════════════════════════════════
+
 :create Polarity {
-  name: String =>
-  luminary: String,
-  description: String,
-  phase: String,
-  dignity: String
+  ordinal: Int =>
+  variant: String,
+  structure: String
 }
 
-# ─── Structure (new in sema-core) ────────────────────────────────────
+:create Modality {
+  ordinal: Int =>
+  variant: String,
+  structure: String
+}
 
-:create Type {
-  name: String =>
-  description: String,
-  phase: String,
-  dignity: String
+:create Dignity {
+  ordinal: Int =>
+  variant: String,
+  structure: String
+}
+
+:create Archetype {
+  ordinal: Int =>
+  variant: String,
+  structure: String
+}
+
+# ═══════════════════════════════════════════════════════════════════════
+# Composite domains — astrological
+# ═══════════════════════════════════════════════════════════════════════
+
+:create Element {
+  ordinal: Int =>
+  variant: String,
+  structure: String
+}
+
+:create Sign {
+  ordinal: Int =>
+  variant: String,
+  structure: String
+}
+
+:create House {
+  ordinal: Int =>
+  variant: String,
+  structure: String
+}
+
+:create Dimension {
+  ordinal: Int =>
+  variant: String,
+  structure: String
+}
+
+:create Measure {
+  ordinal: Int =>
+  variant: String,
+  structure: String
+}
+
+:create Decan {
+  ordinal: Int =>
+  variant: String,
+  structure: String
+}
+
+:create Aspect {
+  ordinal: Int =>
+  variant: String,
+  structure: String
+}
+
+:create AspectNature {
+  ordinal: Int =>
+  variant: String,
+  structure: String
+}
+
+:create Condition {
+  ordinal: Int =>
+  variant: String,
+  structure: String
+}
+
+# ═══════════════════════════════════════════════════════════════════════
+# Aligned domains — lifecycle, direction, quality
+# ═══════════════════════════════════════════════════════════════════════
+
+:create Phase {
+  ordinal: Int =>
+  variant: String,
+  structure: String
+}
+
+:create Direction {
+  ordinal: Int =>
+  variant: String,
+  structure: String
 }
 
 :create Scalar {
-  name: String =>
-  description: String,
-  phase: String,
-  dignity: String
+  ordinal: Int =>
+  variant: String,
+  structure: String
 }
 
 :create Cardinality {
-  name: String =>
-  description: String,
-  phase: String,
-  dignity: String
+  ordinal: Int =>
+  variant: String,
+  structure: String
 }
 
-:create field {
-  relation: String,
-  column: String =>
-  scalar: String,
-  target: String,
-  unit: String,
-  description: String,
-  phase: String,
-  dignity: String
+# ═══════════════════════════════════════════════════════════════════════
+# Unit sub-domains
+# ═══════════════════════════════════════════════════════════════════════
+
+:create TimeUnit {
+  ordinal: Int =>
+  variant: String,
+  structure: String
 }
 
-# ─── Self-describing schema relations ────────────────────────────────
+:create PositionUnit {
+  ordinal: Int =>
+  variant: String,
+  structure: String
+}
+
+:create CountUnit {
+  ordinal: Int =>
+  variant: String,
+  structure: String
+}
+
+:create SizeUnit {
+  ordinal: Int =>
+  variant: String,
+  structure: String
+}
+
+# ═══════════════════════════════════════════════════════════════════════
+# Support relations
+# ═══════════════════════════════════════════════════════════════════════
+
+:create glyph {
+  domain: String,
+  variant: String =>
+  codepoint: String
+}
+
+:create structure_field {
+  owner: String,
+  field: String =>
+  structure: String,
+  cardinality: String,
+  ordinal: Int
+}
+
+:create measure_unit {
+  measure: String =>
+  unit_domain: String
+}
+
+# ═══════════════════════════════════════════════════════════════════════
+# Schema relations (self-describing capnp schema)
+# ═══════════════════════════════════════════════════════════════════════
 
 :create schema_entry {
   schema: String,
   name: String =>
   structure: String,
-  ordinal: Int,
-  phase: String,
-  dignity: String
+  ordinal: Int
 }
 
 :create schema_field {
@@ -86,27 +211,21 @@
   structure: String,
   target: String,
   ordinal: Int,
-  cardinality: String,
-  phase: String,
-  dignity: String
+  cardinality: String
 }
 
 :create schema_variant {
   schema: String,
   owner: String,
   name: String =>
-  ordinal: Int,
-  phase: String,
-  dignity: String
+  ordinal: Int
 }
 
 :create schema_method {
   schema: String,
   interface: String,
   name: String =>
-  ordinal: Int,
-  phase: String,
-  dignity: String
+  ordinal: Int
 }
 
 :create schema_param {
@@ -117,22 +236,5 @@
   direction: String,
   structure: String,
   target: String,
-  ordinal: Int,
-  phase: String,
-  dignity: String
+  ordinal: Int
 }
-
-# ─── name mapping (NEW — not in noesis-schema) ──────────────────────
-# Name domain is created by noesis-schema. This is the mapping relation.
-
-:create name_map {
-  domain: String,
-  variant: String,
-  generator: String,
-  position: String =>
-  phase: String,
-  dignity: String
-}
-
-# Direction, Name, measure_unit, TimeUnit, PositionUnit, CountUnit, SizeUnit
-# are created by noesis-schema (loaded after sema-core). Seeds are in sema-core-seed.
