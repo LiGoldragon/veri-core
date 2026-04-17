@@ -16,8 +16,8 @@
       inputs.crane.follows = "crane";
       inputs.flake-utils.follows = "flake-utils";
     };
-    aski = {
-      url = "github:Criome/aski";
+    aski-core = {
+      url = "github:Criome/aski-core";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.fenix.follows = "fenix";
       inputs.crane.follows = "crane";
@@ -26,7 +26,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, fenix, crane, flake-utils, corec, aski, ... }:
+  outputs = { self, nixpkgs, fenix, crane, flake-utils, corec, aski-core, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
@@ -34,16 +34,16 @@
         craneLib = (crane.mkLib pkgs).overrideToolchain toolchain;
 
         corec-bin = corec.packages.${system}.corec;
-        aski-source = aski.packages.${system}.source;
+        aski-core-source = aski-core.packages.${system}.source;
 
         src = pkgs.lib.cleanSourceWith {
           src = ./.;
           filter = path: type:
             (craneLib.filterCargoSources path type)
-            || (builtins.match ".*\\.aski$" path != null);
+            || (builtins.match ".*\\.core$" path != null);
         };
 
-        # Run corec on source/*.aski → generated/sema_core.rs
+        # Run corec on source/*.core → generated/sema_core.rs
         generated = pkgs.runCommand "sema-core-generated" {
           nativeBuildInputs = [ corec-bin ];
         } ''
@@ -53,14 +53,14 @@
           cp generated/sema_core.rs $out/
         '';
 
-        # Full source tree with generated types + aski dependency
+        # Full source tree with generated types + aski-core dependency
         sema-core-source = pkgs.runCommand "sema-core-source" {} ''
           cp -r ${src} $out
           chmod -R +w $out
           mkdir -p $out/generated
           cp ${generated}/sema_core.rs $out/generated/
           mkdir -p $out/flake-crates
-          cp -r ${aski-source} $out/flake-crates/aski
+          cp -r ${aski-core-source} $out/flake-crates/aski-core
         '';
 
         commonArgs = {
