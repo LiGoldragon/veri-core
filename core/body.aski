@@ -1,33 +1,24 @@
-;; body.aski — body and method body domains
-;;
-;; Derived from Body.synth, Method.synth.
+;; body.aski — body, block, method body, and parameter domains
 
 (Body Block MethodBody Param)
 
-
-;; ── Block ───────────────────────────────────────────────────────
 
 {Block
   (Statements [Vec Statement])
   (Tail [Option [Box Expr]])}
 
-
-;; ── Method Body ─────────────────────────────────────────────────
-;; Any process delimiter can be a method body directly.
-
 (MethodBody
   (Block Block)
   (Match MatchExpr)
-  (Loop Loop)
+  (Loop LoopExpr)
   (Iteration Iteration)
   {StructConstruct (Type TypeName) (Fields [Vec FieldInit]) Span})
-
-
-;; ── Parameter ───────────────────────────────────────────────────
 
 (Param
   BorrowSelf
   MutBorrowSelf
   OwnedSelf
+  {BorrowNamed (Name TypeName) (Type TypeExpr)}
+  {MutBorrowNamed (Name TypeName) (Type TypeExpr)}
   {Named (Name TypeName) (Type TypeExpr)}
   {Bare (Name TypeName)})

@@ -27,9 +27,6 @@ pub struct MethodName(pub String);
 pub struct TraitName(pub String);
 
 #[derive(Archive, Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ModuleName(pub String);
-
-#[derive(Archive, Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TypeParamName(pub String);
 
 // ── Source position ──────────────────────────────────────

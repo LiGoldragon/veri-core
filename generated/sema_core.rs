@@ -3,7 +3,7 @@
 
 // — from /home/li/git/sema-core/core/body.aski —
 
-#[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 #[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
 #[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
 pub struct Block {
@@ -13,13 +13,13 @@ pub struct Block {
     pub tail: Option<Box<Expr>>,
 }
 
-#[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 #[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
 #[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
 pub enum MethodBody {
     Block(Block),
     Match(MatchExpr),
-    Loop(Loop),
+    Loop(LoopExpr),
     Iteration(Iteration),
     StructConstruct {
         typ: TypeName,
@@ -29,13 +29,21 @@ pub enum MethodBody {
     },
 }
 
-#[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 #[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
 #[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
 pub enum Param {
     BorrowSelf,
     MutBorrowSelf,
     OwnedSelf,
+    BorrowNamed {
+        name: TypeName,
+        typ: TypeExpr,
+    },
+    MutBorrowNamed {
+        name: TypeName,
+        typ: TypeExpr,
+    },
     Named {
         name: TypeName,
         typ: TypeExpr,
@@ -48,10 +56,40 @@ pub enum Param {
 
 // — from /home/li/git/sema-core/core/expr.aski —
 
-#[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
+#[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
+pub struct FieldInit {
+    pub name: FieldName,
+    #[rkyv(omit_bounds)]
+    pub value: Box<Expr>,
+}
+
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 #[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
 #[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
 pub enum Expr {
+    IntLit {
+        value: i64,
+        span: Span,
+    },
+    FloatLit {
+        value: f64,
+        span: Span,
+    },
+    StringLit {
+        value: String,
+        span: Span,
+    },
+    BoolLit {
+        value: bool,
+        span: Span,
+    },
+    CharLit {
+        value: u32,
+        span: Span,
+    },
+    UnitLit,
     BinAdd {
         #[rkyv(omit_bounds)]
         left: Box<Expr>,
@@ -67,6 +105,13 @@ pub enum Expr {
         span: Span,
     },
     BinMul {
+        #[rkyv(omit_bounds)]
+        left: Box<Expr>,
+        #[rkyv(omit_bounds)]
+        right: Box<Expr>,
+        span: Span,
+    },
+    BinDiv {
         #[rkyv(omit_bounds)]
         left: Box<Expr>,
         #[rkyv(omit_bounds)]
@@ -136,6 +181,31 @@ pub enum Expr {
         right: Box<Expr>,
         span: Span,
     },
+    UnaryNeg {
+        #[rkyv(omit_bounds)]
+        inner: Box<Expr>,
+        span: Span,
+    },
+    UnaryNot {
+        #[rkyv(omit_bounds)]
+        inner: Box<Expr>,
+        span: Span,
+    },
+    UnaryDeref {
+        #[rkyv(omit_bounds)]
+        inner: Box<Expr>,
+        span: Span,
+    },
+    UnaryBorrow {
+        #[rkyv(omit_bounds)]
+        inner: Box<Expr>,
+        span: Span,
+    },
+    UnaryBorrowMut {
+        #[rkyv(omit_bounds)]
+        inner: Box<Expr>,
+        span: Span,
+    },
     FieldAccess {
         #[rkyv(omit_bounds)]
         object: Box<Expr>,
@@ -155,8 +225,18 @@ pub enum Expr {
         inner: Box<Expr>,
         span: Span,
     },
+    PathCall {
+        typ: TypeName,
+        method: MethodName,
+        #[rkyv(omit_bounds)]
+        args: Vec<Expr>,
+        span: Span,
+    },
     InstanceRef {
         name: TypeName,
+        span: Span,
+    },
+    SelfRef {
         span: Span,
     },
     PathVariant {
@@ -164,50 +244,80 @@ pub enum Expr {
         variant: VariantName,
         span: Span,
     },
-    PathMethod {
+    PathVariantData {
         typ: TypeName,
-        method: MethodName,
+        variant: VariantName,
         #[rkyv(omit_bounds)]
-        args: Vec<Expr>,
+        payload: Box<Expr>,
         span: Span,
     },
-    IntLit {
-        value: i64,
-        span: Span,
-    },
-    FloatLit {
-        value: f64,
-        span: Span,
-    },
-    StringLit {
-        value: String,
-        span: Span,
-    },
-    InlineEval(Block),
-    Match(MatchExpr),
-    Loop(Loop),
-    Iteration(Iteration),
     StructConstruct {
         typ: TypeName,
         #[rkyv(omit_bounds)]
         fields: Vec<FieldInit>,
         span: Span,
     },
-}
-
-#[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
-#[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
-#[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
-pub struct FieldInit {
-    pub name: FieldName,
-    #[rkyv(omit_bounds)]
-    pub value: Box<Expr>,
+    TupleExpr {
+        #[rkyv(omit_bounds)]
+        elements: Vec<Expr>,
+        span: Span,
+    },
+    ArrayExpr {
+        #[rkyv(omit_bounds)]
+        elements: Vec<Expr>,
+        span: Span,
+    },
+    InlineEval(Block),
+    Match(MatchExpr),
+    Loop(LoopExpr),
+    Iteration(Iteration),
+    EarlyReturn(#[rkyv(omit_bounds)] Box<Expr>),
+    ReturnUnit,
+    Break(#[rkyv(omit_bounds)] Option<Box<Expr>>),
+    Continue,
+    CastExpr {
+        #[rkyv(omit_bounds)]
+        inner: Box<Expr>,
+        target: TypeExpr,
+        span: Span,
+    },
 }
 
 
 // — from /home/li/git/sema-core/core/pattern.aski —
 
-#[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
+#[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
+pub enum LiteralValue {
+    Int(i64),
+    Float(f64),
+    Str(String),
+    Bool(bool),
+    Char(u32),
+}
+
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
+#[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
+pub struct PatternField {
+    pub name: FieldName,
+    #[rkyv(omit_bounds)]
+    pub pattern: Option<Pattern>,
+}
+
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
+#[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
+pub struct MatchArm {
+    pub pattern: Pattern,
+    #[rkyv(omit_bounds)]
+    pub guard: Option<Box<Expr>>,
+    #[rkyv(omit_bounds)]
+    pub result: Box<Expr>,
+}
+
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 #[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
 #[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
 pub struct MatchExpr {
@@ -217,82 +327,194 @@ pub struct MatchExpr {
     pub arms: Vec<MatchArm>,
 }
 
-#[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
-#[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
-#[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
-pub struct MatchArm {
-    #[rkyv(omit_bounds)]
-    pub patterns: Vec<Pattern>,
-    #[rkyv(omit_bounds)]
-    pub result: Box<Expr>,
-}
-
-#[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 #[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
 #[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
 pub enum Pattern {
-    Variant(VariantName),
-    VariantBind {
+    Wildcard,
+    IdentBind {
+        name: TypeName,
+        mutable: bool,
+        span: Span,
+    },
+    LitPattern {
+        value: LiteralValue,
+        span: Span,
+    },
+    VariantPattern {
+        #[rkyv(omit_bounds)]
+        typ: Option<TypeName>,
         variant: VariantName,
-        binding: TypeName,
+        span: Span,
+    },
+    VariantDataPattern {
+        #[rkyv(omit_bounds)]
+        typ: Option<TypeName>,
+        variant: VariantName,
+        #[rkyv(omit_bounds)]
+        inner: Vec<Pattern>,
+        span: Span,
+    },
+    VariantStructPattern {
+        #[rkyv(omit_bounds)]
+        typ: Option<TypeName>,
+        variant: VariantName,
+        #[rkyv(omit_bounds)]
+        fields: Vec<PatternField>,
+        span: Span,
+    },
+    TuplePattern {
+        #[rkyv(omit_bounds)]
+        elements: Vec<Pattern>,
+        span: Span,
+    },
+    StructPattern {
+        typ: TypeName,
+        #[rkyv(omit_bounds)]
+        fields: Vec<PatternField>,
+        span: Span,
     },
     OrPattern {
         #[rkyv(omit_bounds)]
-        variants: Vec<VariantName>,
+        alternatives: Vec<Pattern>,
+        span: Span,
     },
-    StringLit(String),
+    StringLitPattern(String),
+    RefPattern {
+        #[rkyv(omit_bounds)]
+        inner: Box<Pattern>,
+        span: Span,
+    },
+    Rest,
 }
 
 
 // — from /home/li/git/sema-core/core/root.aski —
 
-#[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
-#[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
-#[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
-pub enum RootChild {
-    Module(ModuleDef),
-    Enum(EnumDef),
-    Struct(StructDef),
-    Newtype(NewtypeDef),
-    TraitDecl(TraitDeclDef),
-    TraitImpl(TraitImplDef),
-    Const(ConstDef),
-    Ffi(FfiDef),
-    Process(Block),
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+pub enum Visibility {
+    Public,
+    Private,
 }
 
-#[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
-#[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
-#[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
-pub struct ModuleDef {
-    pub name: TypeName,
-    #[rkyv(omit_bounds)]
-    pub exports: Vec<TypeName>,
-    #[rkyv(omit_bounds)]
-    pub imports: Vec<ModuleImport>,
-    pub span: Span,
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+pub enum DeriveAttr {
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Default,
+    RkyvArchive,
+    RkyvSerialize,
+    RkyvDeserialize,
 }
 
-#[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
+#[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
+pub enum ExportItem {
+    Type_(TypeName),
+    Trait(TraitName),
+}
+
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
+#[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
+pub enum ImportItem {
+    Type_(TypeName),
+    Trait(TraitName),
+}
+
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 #[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
 #[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
 pub struct ModuleImport {
     pub source: TypeName,
     #[rkyv(omit_bounds)]
-    pub names: Vec<TypeName>,
+    pub names: Vec<ImportItem>,
 }
 
-#[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 #[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
 #[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
-pub struct EnumDef {
-    pub name: TypeName,
-    #[rkyv(omit_bounds)]
-    pub children: Vec<EnumChild>,
+pub struct StructField {
+    pub name: FieldName,
+    pub visibility: Visibility,
+    pub typ: TypeExpr,
     pub span: Span,
 }
 
-#[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
+#[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
+pub struct FfiFunction {
+    pub name: MethodName,
+    #[rkyv(omit_bounds)]
+    pub params: Vec<Param>,
+    #[rkyv(omit_bounds)]
+    pub return_type: Option<TypeExpr>,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
+#[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
+pub struct ConstDef {
+    pub name: TypeName,
+    pub visibility: Visibility,
+    pub typ: TypeExpr,
+    pub value: LiteralValue,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
+#[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
+pub struct FfiDef {
+    pub library: TypeName,
+    #[rkyv(omit_bounds)]
+    pub functions: Vec<FfiFunction>,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
+#[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
+pub struct NewtypeDef {
+    pub name: TypeName,
+    pub visibility: Visibility,
+    #[rkyv(omit_bounds)]
+    pub generic_params: Vec<GenericParamDef>,
+    #[rkyv(omit_bounds)]
+    pub derives: Vec<DeriveAttr>,
+    pub wraps: TypeExpr,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
+#[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
+pub enum StructChild {
+    TypedField {
+        name: FieldName,
+        visibility: Visibility,
+        typ: TypeExpr,
+        span: Span,
+    },
+    SelfTypedField {
+        name: FieldName,
+        visibility: Visibility,
+        span: Span,
+    },
+    NestedEnum(EnumDef),
+    NestedStruct(StructDef),
+}
+
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 #[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
 #[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
 pub enum EnumChild {
@@ -315,113 +537,81 @@ pub enum EnumChild {
     NestedStruct(StructDef),
 }
 
-#[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 #[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
 #[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
 pub struct StructDef {
     pub name: TypeName,
+    pub visibility: Visibility,
+    #[rkyv(omit_bounds)]
+    pub generic_params: Vec<GenericParamDef>,
+    #[rkyv(omit_bounds)]
+    pub derives: Vec<DeriveAttr>,
     #[rkyv(omit_bounds)]
     pub children: Vec<StructChild>,
     pub span: Span,
 }
 
-#[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 #[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
 #[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
-pub enum StructChild {
-    TypedField {
-        name: FieldName,
-        typ: TypeExpr,
-        span: Span,
-    },
-    SelfTypedField {
-        name: FieldName,
-        span: Span,
-    },
-    NestedEnum(EnumDef),
-    NestedStruct(StructDef),
-}
-
-#[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
-#[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
-#[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
-pub struct StructField {
-    pub name: FieldName,
-    pub typ: TypeExpr,
-    pub span: Span,
-}
-
-#[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
-#[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
-#[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
-pub struct NewtypeDef {
+pub struct EnumDef {
     pub name: TypeName,
-    pub wraps: TypeExpr,
+    pub visibility: Visibility,
+    #[rkyv(omit_bounds)]
+    pub generic_params: Vec<GenericParamDef>,
+    #[rkyv(omit_bounds)]
+    pub derives: Vec<DeriveAttr>,
+    #[rkyv(omit_bounds)]
+    pub children: Vec<EnumChild>,
     pub span: Span,
 }
 
-#[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 #[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
 #[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
-pub struct ConstDef {
+pub struct ModuleDef {
     pub name: TypeName,
-    pub typ: TypeExpr,
-    pub value: LiteralValue,
+    pub visibility: Visibility,
+    #[rkyv(omit_bounds)]
+    pub exports: Vec<ExportItem>,
+    #[rkyv(omit_bounds)]
+    pub imports: Vec<ModuleImport>,
     pub span: Span,
 }
 
-#[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 #[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
 #[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
-pub enum LiteralValue {
-    Int(i64),
-    Float(f64),
-    Str(String),
-}
-
-#[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
-#[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
-#[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
-pub struct FfiDef {
-    pub library: TypeName,
-    #[rkyv(omit_bounds)]
-    pub functions: Vec<FfiFunction>,
-    pub span: Span,
-}
-
-#[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
-#[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
-#[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
-pub struct FfiFunction {
-    pub name: MethodName,
-    #[rkyv(omit_bounds)]
-    pub params: Vec<Param>,
-    #[rkyv(omit_bounds)]
-    pub return_type: Option<TypeExpr>,
-    pub span: Span,
+pub enum RootChild {
+    Module(ModuleDef),
+    Enum(EnumDef),
+    Struct(StructDef),
+    Newtype(NewtypeDef),
+    TraitDecl(TraitDeclDef),
+    TraitImpl(TraitImplDef),
+    Const(ConstDef),
+    Ffi(FfiDef),
+    Process(Block),
 }
 
 
 // — from /home/li/git/sema-core/core/statement.aski —
 
-#[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 #[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
 #[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
-pub enum Statement {
-    EarlyReturn(#[rkyv(omit_bounds)] Box<Expr>),
-    Loop(Loop),
-    Iteration(Iteration),
-    LocalTypeDecl {
-        name: TypeName,
-        typ: TypeExpr,
-        span: Span,
-    },
-    Mutation(Mutation),
-    Instance(Instance),
-    Expr(#[rkyv(omit_bounds)] Box<Expr>),
+pub struct LetBinding {
+    pub pattern: Pattern,
+    pub mutable: bool,
+    #[rkyv(omit_bounds)]
+    pub type_annotation: Option<TypeExpr>,
+    #[rkyv(omit_bounds)]
+    pub value: Box<Expr>,
+    pub span: Span,
 }
 
-#[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 #[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
 #[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
 pub struct Instance {
@@ -433,7 +623,7 @@ pub struct Instance {
     pub span: Span,
 }
 
-#[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 #[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
 #[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
 pub struct Mutation {
@@ -444,43 +634,79 @@ pub struct Mutation {
     pub span: Span,
 }
 
-#[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 #[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
 #[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
-pub struct Loop {
+pub struct LoopExpr {
     #[rkyv(omit_bounds)]
     pub condition: Option<Box<Expr>>,
-    #[rkyv(omit_bounds)]
-    pub body: Vec<Statement>,
+    pub body: Block,
 }
 
-#[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 #[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
 #[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
 pub struct Iteration {
+    pub binding: Pattern,
     #[rkyv(omit_bounds)]
     pub source: Box<Expr>,
     pub body: Block,
 }
 
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
+#[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
+pub enum Statement {
+    Let(LetBinding),
+    Expr(#[rkyv(omit_bounds)] Box<Expr>),
+    EarlyReturn(#[rkyv(omit_bounds)] Box<Expr>),
+    ReturnUnit,
+    Loop(LoopExpr),
+    While {
+        #[rkyv(omit_bounds)]
+        condition: Box<Expr>,
+        body: Block,
+        span: Span,
+    },
+    Iteration(Iteration),
+    LocalTypeDecl {
+        name: TypeName,
+        typ: TypeExpr,
+        span: Span,
+    },
+    Mutation(Mutation),
+    Instance(Instance),
+}
+
 
 // — from /home/li/git/sema-core/core/trait.aski —
 
-#[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 #[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
 #[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
-pub struct TraitDeclDef {
-    pub name: TraitName,
+pub struct AssociatedTypeDef {
+    pub name: TypeName,
     #[rkyv(omit_bounds)]
-    pub signatures: Vec<MethodSig>,
-    pub span: Span,
+    pub bounds: Vec<TraitBound>,
+    #[rkyv(omit_bounds)]
+    pub default: Option<TypeExpr>,
 }
 
-#[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
+#[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
+pub struct AssociatedTypeImpl {
+    pub name: TypeName,
+    pub typ: TypeExpr,
+}
+
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 #[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
 #[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
 pub struct MethodSig {
     pub name: MethodName,
+    #[rkyv(omit_bounds)]
+    pub generic_params: Vec<GenericParamDef>,
     #[rkyv(omit_bounds)]
     pub params: Vec<Param>,
     #[rkyv(omit_bounds)]
@@ -488,22 +714,13 @@ pub struct MethodSig {
     pub span: Span,
 }
 
-#[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
-#[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
-#[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
-pub struct TraitImplDef {
-    pub trait_name: TraitName,
-    pub typ: TypeName,
-    #[rkyv(omit_bounds)]
-    pub methods: Vec<MethodDef>,
-    pub span: Span,
-}
-
-#[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 #[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
 #[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
 pub struct MethodDef {
     pub name: MethodName,
+    #[rkyv(omit_bounds)]
+    pub generic_params: Vec<GenericParamDef>,
     #[rkyv(omit_bounds)]
     pub params: Vec<Param>,
     #[rkyv(omit_bounds)]
@@ -512,30 +729,128 @@ pub struct MethodDef {
     pub span: Span,
 }
 
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
+#[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
+pub struct TraitDeclDef {
+    pub name: TraitName,
+    pub visibility: Visibility,
+    #[rkyv(omit_bounds)]
+    pub generic_params: Vec<GenericParamDef>,
+    #[rkyv(omit_bounds)]
+    pub super_traits: Vec<TraitBound>,
+    #[rkyv(omit_bounds)]
+    pub associated_types: Vec<AssociatedTypeDef>,
+    #[rkyv(omit_bounds)]
+    pub signatures: Vec<MethodSig>,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
+#[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
+pub struct TraitImplDef {
+    pub trait_name: TraitName,
+    #[rkyv(omit_bounds)]
+    pub trait_args: Vec<TypeExpr>,
+    pub typ: TypeExpr,
+    #[rkyv(omit_bounds)]
+    pub generic_params: Vec<GenericParamDef>,
+    #[rkyv(omit_bounds)]
+    pub methods: Vec<MethodDef>,
+    #[rkyv(omit_bounds)]
+    pub associated_types: Vec<AssociatedTypeImpl>,
+    pub span: Span,
+}
+
 
 // — from /home/li/git/sema-core/core/type.aski —
 
-#[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
-#[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
-#[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
-pub enum TypeExpr {
-    Simple(TypeName),
-    Application(TypeApplication),
-    Param(TypeParamName),
-    BoundedParam {
-        #[rkyv(omit_bounds)]
-        bounds: Vec<TypeName>,
-    },
-    InstanceRef(TypeApplication),
-}
-
-#[derive(Debug, Clone, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
 #[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
 #[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
 pub struct TypeApplication {
     pub constructor: TypeName,
     #[rkyv(omit_bounds)]
     pub args: Vec<TypeExpr>,
+}
+
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
+#[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
+pub struct TraitBound {
+    pub trait_name: TraitName,
+    #[rkyv(omit_bounds)]
+    pub args: Vec<TypeExpr>,
+}
+
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
+#[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
+pub struct GenericParamDef {
+    pub name: TypeParamName,
+    #[rkyv(omit_bounds)]
+    pub bounds: Vec<TraitBound>,
+    #[rkyv(omit_bounds)]
+    pub default: Option<TypeExpr>,
+}
+
+#[derive(Debug, Clone, PartialEq, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)]
+#[rkyv(serialize_bounds(__S: rkyv::ser::Writer + rkyv::ser::Allocator, __S::Error: rkyv::rancor::Source))]
+#[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
+pub enum TypeExpr {
+    Named(TypeName),
+    SelfType,
+    Application(TypeApplication),
+    Param(TypeParamName),
+    BoundedParam {
+        #[rkyv(omit_bounds)]
+        bounds: Vec<TypeName>,
+    },
+    Ref {
+        #[rkyv(omit_bounds)]
+        inner: Box<TypeExpr>,
+    },
+    MutRef {
+        #[rkyv(omit_bounds)]
+        inner: Box<TypeExpr>,
+    },
+    Boxed(#[rkyv(omit_bounds)] Box<TypeExpr>),
+    Tuple {
+        #[rkyv(omit_bounds)]
+        elements: Vec<TypeExpr>,
+    },
+    Unit,
+    Array {
+        #[rkyv(omit_bounds)]
+        element: Box<TypeExpr>,
+        size: u64,
+    },
+    Slice {
+        #[rkyv(omit_bounds)]
+        element: Box<TypeExpr>,
+    },
+    FnPtr {
+        #[rkyv(omit_bounds)]
+        params: Vec<TypeExpr>,
+        #[rkyv(omit_bounds)]
+        return_: Box<TypeExpr>,
+    },
+    Never,
+    DynTrait {
+        #[rkyv(omit_bounds)]
+        bounds: Vec<TraitBound>,
+    },
+    ImplTrait {
+        #[rkyv(omit_bounds)]
+        bounds: Vec<TraitBound>,
+    },
+    InstanceRef(TypeApplication),
+    QualifiedPath {
+        #[rkyv(omit_bounds)]
+        base: Box<TypeExpr>,
+        segment: TypeName,
+    },
 }
 
 

@@ -1,24 +1,43 @@
 ;; type.aski — type expression domains
 ;;
-;; Derived from Type.synth, TypeApplication.synth, GenericParam.synth.
-;; Represents type references in field types, return types,
-;; param types, newtype wrapping, type application.
+;; Every position where a type can appear in Rust.
+;; Each variant maps to exactly one Rust codegen pattern.
+;;
+;; Leaf types first (Rust declaration order).
 
-(Type TypeExpr TypeApplication GenericParam)
+(Type TypeExpr TypeApplication TraitBound GenericParamDef)
 
-
-;; ── Type Expression ─────────────────────────────────────────────
-
-(TypeExpr
-  (Simple TypeName)
-  (Application TypeApplication)
-  (Param TypeParamName)
-  {BoundedParam (Bounds [Vec TypeName])}
-  (InstanceRef TypeApplication))
-
-
-;; ── Type Application ────────────────────────────────────────────
 
 {TypeApplication
   (Constructor TypeName)
   (Args [Vec TypeExpr])}
+
+{TraitBound
+  (Trait TraitName)
+  (Args [Vec TypeExpr])}
+
+{GenericParamDef
+  (Name TypeParamName)
+  (Bounds [Vec TraitBound])
+  (Default [Option TypeExpr])}
+
+
+(TypeExpr
+  (Named TypeName)
+  SelfType
+  (Application TypeApplication)
+  (Param TypeParamName)
+  {BoundedParam (Bounds [Vec TypeName])}
+  {Ref (Inner [Box TypeExpr])}
+  {MutRef (Inner [Box TypeExpr])}
+  (Boxed [Box TypeExpr])
+  {Tuple (Elements [Vec TypeExpr])}
+  Unit
+  {Array (Element [Box TypeExpr]) (Size U64)}
+  {Slice (Element [Box TypeExpr])}
+  {FnPtr (Params [Vec TypeExpr]) (Return [Box TypeExpr])}
+  Never
+  {DynTrait (Bounds [Vec TraitBound])}
+  {ImplTrait (Bounds [Vec TraitBound])}
+  (InstanceRef TypeApplication)
+  {QualifiedPath (Base [Box TypeExpr]) (Segment TypeName)})
