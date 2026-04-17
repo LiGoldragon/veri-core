@@ -6,7 +6,7 @@
 // Run `corec source generated/sema_core.rs` to regenerate.
 // Domain definitions are in source/*.core.
 
-pub use aski;
+pub use aski_core;
 
 use rkyv::{Archive, Serialize, Deserialize};
 
@@ -19,7 +19,7 @@ use rkyv::{Archive, Serialize, Deserialize};
 #[rkyv(deserialize_bounds(__D::Error: rkyv::rancor::Source))]
 pub struct Program {
     #[rkyv(omit_bounds)]
-    pub modules: Vec<aski::ModuleDef>,
+    pub modules: Vec<aski_core::ModuleDef>,
     pub resolution: ResolutionTable,
 }
 

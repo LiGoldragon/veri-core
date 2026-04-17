@@ -3,7 +3,7 @@
 version = 4
 
 [[package]]
-name = "aski"
+name = "aski-core"
 version = "0.17.0"
 dependencies = [
  "rkyv",
@@ -118,7 +118,7 @@ dependencies = [
 name = "sema-core"
 version = "0.17.0"
 dependencies = [
- "aski",
+ "aski-core",
  "rkyv",
 ]
 
