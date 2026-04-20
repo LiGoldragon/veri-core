@@ -1,4 +1,4 @@
-;; program.aski — veric output types
+;; program.core — veric output types
 ;;
 ;; The verified program: all modules + resolution indices.
 ;; veric serializes, semac/domainc/rsc/askid deserialize.
